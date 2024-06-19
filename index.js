@@ -67,7 +67,7 @@ const addUserExercise = (id, description, duration, date, done) => {
     .then((data) => {
       console.log(data);
       done(null, {
-        _id: data._id,
+        _id: id,
         username: data.username,
         date: data.date,
         duration: data.duration,
