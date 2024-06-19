@@ -11,10 +11,6 @@ let exerciseSchema = new mongoose.Schema({
   description: String,
   duration: Number,
   date: String,
-  __v: {
-    type: Number,
-    select: false,
-  },
 });
 
 let userSchema = new mongoose.Schema({
@@ -27,10 +23,6 @@ let userSchema = new mongoose.Schema({
     default: 0,
   },
   log: [exerciseSchema],
-  __v: {
-    type: Number,
-    select: false,
-  },
 });
 
 let Exercise = mongoose.model("Exercise", exerciseSchema);
@@ -69,19 +61,38 @@ const addUserExercise = (id, description, duration, date, done) => {
         user.log.push(exercise);
         user.count++;
         user.save();
-        return user;
+        return exercise;
       });
     })
     .then((data) => {
-      done(null, data);
+      console.log(data);
+      done(null, {
+        _id: data._id,
+        username: data.username,
+        date: data.date,
+        duration: data.duration,
+        description: data.description,
+      });
     });
 };
 
 const getUserWithExercises = (id, done) => {
   User.findById(id)
-    .select("_id username count log")
+    .select({ _id: 1, username: 1, count: 1, log: 1 })
     .then((user) => {
-      done(null, user);
+      let log = user.log.map((exercise) => {
+        return {
+          description: exercise.description,
+          duration: exercise.duration,
+          date: exercise.date,
+        };
+      });
+      done(null, {
+        _id: user._id,
+        username: user.username,
+        count: user.count,
+        log: log,
+      });
     })
     .catch((err) => {
       done(err, null);
@@ -118,7 +129,17 @@ const getUserFromToLimit = (id, from, to, limit, done) => {
         }
       });
 
-      log = log.slice(0, limit);
+      if (limit) {
+        log = log.slice(0, limit);
+      }
+
+      log = log.map((exercise) => {
+        return {
+          description: exercise.description,
+          duration: exercise.duration,
+          date: exercise.date,
+        };
+      });
 
       let data = {
         _id: user._id,
@@ -158,8 +179,6 @@ app.post("/api/users", function (req, res) {
 });
 
 app.post("/api/users/:_id/exercises", function (req, res) {
-  console.log(req.body);
-
   let id = req.params._id;
   let description = req.body.description;
   let duration = req.body.duration;
@@ -177,6 +196,7 @@ app.post("/api/users/:_id/exercises", function (req, res) {
     date = date.toDateString();
 
     addUserExercise(id, description, duration, date, function (err, data) {
+      console.log(data);
       res.json(data);
     });
   } else if (!numRegex.test(duration)) {
