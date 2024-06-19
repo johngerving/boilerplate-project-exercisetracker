@@ -65,7 +65,6 @@ const addUserExercise = (id, description, duration, date, done) => {
       });
     })
     .then((data) => {
-      console.log(data);
       done(null, {
         _id: id,
         username: data.username,
@@ -80,6 +79,7 @@ const getUserWithExercises = (id, done) => {
   User.findById(id)
     .select({ _id: 1, username: 1, count: 1, log: 1 })
     .then((user) => {
+      console.log(user);
       let log = user.log.map((exercise) => {
         return {
           description: exercise.description,
@@ -87,12 +87,13 @@ const getUserWithExercises = (id, done) => {
           date: exercise.date,
         };
       });
-      done(null, {
+      let data = {
         _id: user._id,
         username: user.username,
         count: user.count,
         log: log,
-      });
+      };
+      done(null, data);
     })
     .catch((err) => {
       done(err, null);
@@ -184,6 +185,10 @@ app.post("/api/users/:_id/exercises", function (req, res) {
   let duration = req.body.duration;
   let date = req.body.date;
 
+  if (typeof date == "undefined") {
+    date = "";
+  }
+
   let numRegex = /^[0-9]+$/;
   let dateRegex = /^[0-9]{4}\-[0-9]{2}\-[0-9]{2}$/;
 
@@ -196,7 +201,6 @@ app.post("/api/users/:_id/exercises", function (req, res) {
     date = date.toDateString();
 
     addUserExercise(id, description, duration, date, function (err, data) {
-      console.log(data);
       res.json(data);
     });
   } else if (!numRegex.test(duration)) {
@@ -217,6 +221,18 @@ app.get("/api/users/:_id/logs", function (req, res) {
         if (err) {
           console.error(err);
         }
+
+        if (req.query.from) {
+          data.from = new Date(req.query.from).toDateString();
+        }
+        if (req.query.to) {
+          data.to = new Date(req.query.to).toDateString();
+        }
+        if (req.query.limit) {
+          data.count = req.query.limit;
+        }
+
+        // console.log(data);
         res.json(data);
       }
     );
@@ -225,6 +241,8 @@ app.get("/api/users/:_id/logs", function (req, res) {
       if (err) {
         console.error(err);
       }
+
+      // console.log(data);
       res.json(data);
     });
   }
